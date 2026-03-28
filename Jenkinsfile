@@ -19,15 +19,19 @@ pipeline {
         }
 
         stage('Deploy') {
-            steps {
-                script {
-                    def dockerCmd = 'docker run -p 3000:3080 -d shahzadk1/make:v1'
-
-                    sshagent(['ec2-server-key']) {
-                        sh "ssh -o StrictHostKeyChecking=no ec2-user@51.102.248.62 ${dockerCmd}"
-                    }
-                }
+    steps {
+        script {
+            withCredentials([file(credentialsId: 'ec2-pem-file', variable: 'KEY_FILE')]) {
+                sh """
+                ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ec2-user@51.102.248.62 "
+                    docker stop \\\$(docker ps -q) || true && 
+                    docker rm \\\$(docker ps -aq) || true && 
+                    docker run -d -p 3000:3080 shahzadk1/make:v1
+                "
+                """
             }
         }
+    }
+}
     }
 }                   
